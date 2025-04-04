@@ -12,12 +12,12 @@ env:
   ECR_REPOSITORY: frontend
   ECS_CLUSTER: ecs-cluster
   ECS_SERVICE: ecs-service
-  TASK_DEFINITION: ecs-task
   CONTAINER_NAME: app
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -30,7 +30,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
 
@@ -40,16 +39,23 @@ jobs:
           docker tag $ECR_REPOSITORY:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
-      - name: Register Task Definition
-        id: register_task
+      - name: Replace image URI in task definition
         run: |
-          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdefinition.json --query "taskDefinition.taskDefinitionArn" --output text)
+          sed -i "s|707002484306.dkr.ecr.us-east-1.amazonaws.com/frontend:latest|${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest|g" taskdefinition.json
+
+      - name: Register new task definition
+        id: register-task
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://taskdefinition.json \
+            --query "taskDefinition.taskDefinitionArn" \
+            --output text)
           echo "TASK_DEF_ARN=${TASK_DEF_ARN}" >> $GITHUB_ENV
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ env.TASK_DEFINITION }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          service: ${{ env.ECS_SERVICE }}
-          wait-for-service-stability: true
+      - name: Deploy new task to ECS service
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition $TASK_DEF_ARN \
+            --region ${{ env.AWS_REGION }}
