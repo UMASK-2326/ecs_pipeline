@@ -42,7 +42,7 @@ jobs:
 
       - name: Replace image URI in task definition
         run: |
-          sed -i "s|707002484306.dkr.ecr.us-east-1.amazonaws.com/frontend:latest|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest|g" task-definition.json
+          sed -i "s|707002484306.dkr.ecr.us-east-1.amazonaws.com/frontend:latest|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest|g" taskdefinition.json
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
