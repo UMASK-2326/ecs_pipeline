@@ -12,7 +12,7 @@ env:
   ECR_REPOSITORY: frontend
   ECS_CLUSTER: ecs-cluster
   ECS_SERVICE: ecs-service
-  TASK_DEFINITION: frontend/task-definition.json
+  TASK_DEFINITION: frontend/taskdefinition.json
   CONTAINER_NAME: app
 
 jobs:
