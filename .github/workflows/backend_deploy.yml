@@ -40,9 +40,11 @@ jobs:
           docker tag $ECR_REPOSITORY:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
-      - name: Replace image URI in task definition
+      - name: Register Task Definition
+        id: register_task
         run: |
-          sed -i "s|707002484306.dkr.ecr.us-east-1.amazonaws.com/backend:latest|$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest|g" taskdefinition.json
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://taskdefinition.json --query "taskDefinition.taskDefinitionArn" --output text)
+          echo "TASK_DEF_ARN=${TASK_DEF_ARN}" >> $GITHUB_ENV
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
